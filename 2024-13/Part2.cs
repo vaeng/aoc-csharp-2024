@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-public static class Part1
+public static class Part2
 {
 
   public static List<long> stones = new();
 
   public struct Claw
   {
+
     public Claw(Complex a, Complex b, Complex price)
     {
       A = a;
@@ -40,6 +41,8 @@ public static class Part1
 
     public long Cost { get; init; }
 
+    public bool canWin { get; init; }
+
     public override string ToString() => $"a: {A}, b: {B}, price: {Price} (Cost: {Cost} with Ax{pushA} Bx{pushB})";
   }
 
@@ -54,7 +57,7 @@ public static class Part1
       long[] rawPrice = input[lineNumber + 2][9..].Split(new string[] { ", Y=" }, StringSplitOptions.RemoveEmptyEntries).Select(s => Convert.ToInt64(s)).ToArray();
       Complex a = new Complex(rawA[0], rawA[1]);
       Complex b = new Complex(rawB[0], rawB[1]);
-      Complex price = new Complex(rawPrice[0], rawPrice[1]);
+      Complex price = new Complex(rawPrice[0] + 10000000000000, rawPrice[1] + 10000000000000);
       claws.Add(new Claw(a, b, price));
     }
   }
@@ -67,7 +70,6 @@ public static class Part1
 
     foreach (var claw in claws)
     {
-      //Console.WriteLine(claw.ToString());
       result += claw.Cost;
     }
     return result.ToString();
