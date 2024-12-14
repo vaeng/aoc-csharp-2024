@@ -1,62 +1,129 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Threading;
 
 public static class Part2 {
 
-  public struct Claw {
+  public struct Robot {
+    public Robot(Complex p, Complex v) {
+      P_0 = p;
+      V = v;
+    }
+    public Complex P_0 { get; init; }
+    public Complex V { get; init; }
 
-    public Claw(Complex a, Complex b, Complex price) {
-      A = a;
-      B = b;
-      Price = price;
-      Cost = 0;
+    public Complex Position(long seconds, long xLimit, long yLimit) {
+      Complex rawPos = P_0 + seconds * V;
+      double wrappedX = WrapToOtherSide(rawPos.Real, xLimit);
+      double wrappedY = WrapToOtherSide(rawPos.Imaginary, yLimit);
+      return new Complex(wrappedX, wrappedY);
+    }
+    public override string ToString() => $"P_0: {P_0}, V: {V}";
+  }
 
-      double divisor = (a.Real * b.Imaginary - a.Imaginary * b.Real);
+  public static double WrapToOtherSide(double raw, long limit) {
+    return (raw % limit + limit) % limit;
+  }
 
-      double i = (price.Real * b.Imaginary - price.Imaginary * b.Real);
-      double j = (price.Imaginary * a.Real - price.Real * a.Imaginary);
+  public static List<Robot> robots = new();
 
-      pushA = (long) (i / divisor);
-      pushB = (long) (j / divisor);
+  public static void Parse(List<String> input) {
+    foreach (string line in input) {
+      string[] temp = line[2..].Split(new string[] { " v=" }, StringSplitOptions.RemoveEmptyEntries).ToArray();
+      long[] p = temp[0].Split(',').Select(s => Convert.ToInt64(s)).ToArray();
+      long[] v = temp[1].Split(',').Select(s => Convert.ToInt64(s)).ToArray();
+      robots.Add(new Robot(new Complex(p[0], p[1]), new Complex(v[0], v[1])));
+    }
+  }
 
-      if (pushA >= 0 && pushB >= 0 && a * pushA + b * pushB == price) {
-        Cost = 3 * pushA + pushB;
+  public static int QuadrantNumber(Complex pos, long xLimit, long yLimit) {
+    if (pos.Real == xLimit / 2 || pos.Imaginary == yLimit / 2) {
+      return 0;
+    }
+    int quadrant = (pos.Real < xLimit / 2) ? 1 : 2;
+    quadrant += (pos.Imaginary < yLimit / 2) ? 0 : 2;
+
+    return quadrant;
+  }
+
+  public static long CalculateResultAndPrintMap(long seconds, long xLimit, long yLimit) {
+    int[] quads = { 0, 0, 0, 0, 0 };
+    Dictionary<Complex, int> map = new();
+
+    foreach (var robot in robots) {
+      Complex pos = robot.Position(seconds, xLimit, yLimit);
+      quads[QuadrantNumber(pos, xLimit, yLimit)]++;
+      if (map.ContainsKey(pos)) {
+        map[pos]++;
+      } else {
+        map[pos] = 1;
       }
     }
 
-    public long pushA { get; set; }
-    public long pushB { get; set; }
-    public Complex A { get; init; }
-    public Complex B { get; init; }
-    public Complex Price { get; init; }
-
-    public long Cost { get; init; }
-    public override string ToString() => $"a: {A}, b: {B}, price: {Price} (Cost: {Cost} with Ax{pushA} Bx{pushB})";
-  }
-
-  public static List<Claw> claws = new();
-
-  public static void Parse(List<String> input) {
-    for (int lineNumber = 0; lineNumber < input.Count; lineNumber += 4) {
-      long[] rawA = input[lineNumber][11..].Split(new string[] { ", Y" }, StringSplitOptions.RemoveEmptyEntries).Select(s => Convert.ToInt64(s)).ToArray();
-      long[] rawB = input[lineNumber + 1][11..].Split(new string[] { ", Y" }, StringSplitOptions.RemoveEmptyEntries).Select(s => Convert.ToInt64(s)).ToArray();
-      long[] rawPrice = input[lineNumber + 2][9..].Split(new string[] { ", Y=" }, StringSplitOptions.RemoveEmptyEntries).Select(s => Convert.ToInt64(s)).ToArray();
-      Complex a = new Complex(rawA[0], rawA[1]);
-      Complex b = new Complex(rawB[0], rawB[1]);
-      Complex price = new Complex(rawPrice[0] + 10000000000000, rawPrice[1] + 10000000000000);
-      claws.Add(new Claw(a, b, price));
+    for (int j = 0; j < yLimit; ++j) {
+      for (int i = 0; i < xLimit; ++i) {
+        Complex pos = new Complex(i, j);
+        if (map.ContainsKey(pos)) {
+          Console.Write('■');
+          //Console.Write(map[pos]);
+        } else {
+          Console.Write(' ');
+        }
+      }
+      Console.WriteLine();
     }
+
+    long result = 1;
+    foreach (var quad in quads[1..]) {
+      result *= quad;
+    }
+    return result;
   }
 
+  public static List<List<bool>> CalculateMap(long seconds, long xLimit, long yLimit) {
+    List<List<bool>> map = new();
+    for (int j = 0; j < yLimit; ++j) {
+      List<bool> line = new();
+      for (int i = 0; i < xLimit; ++i) {
+        line.Add(false);
+      }
+      map.Add(line);
+    }
+    foreach (var robot in robots) {
+      Complex pos = robot.Position(seconds, xLimit, yLimit);
+      map[(int) pos.Imaginary][(int) pos.Real] = true;
+    }
+    return map;
+  }
 
   public static string Solve(List<String> input) {
     Parse(input);
-    long result = 0;
 
-    foreach (var claw in claws) {
-      result += claw.Cost;
+
+    long xLimit = 101; //11;
+    long yLimit = 103; // 7;
+    int secondsMin = 100;
+    int secondsMax = 9000;
+
+    long result = 0;
+    for (int i = secondsMin; i <= secondsMax; i++) {
+      var boolMap = CalculateMap(i, xLimit, yLimit);
+      int sum = 0;
+      for (int j = 0; j < xLimit; j++) {
+        if (boolMap[38][j]) {
+          sum++;
+        }
+      }
+      // Line 38 seems to be some horizontal line for a frame, so check that and cancel in terminal if tree
+      if (sum > xLimit / 4) {
+        Console.Clear();
+        Console.WriteLine($"\n\nCurrent state after {i} seconds:");
+        result = CalculateResultAndPrintMap(i, xLimit, yLimit);
+        Thread.Sleep(300);
+      }
     }
+
     return result.ToString();
   }
 }
