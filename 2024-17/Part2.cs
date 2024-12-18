@@ -27,20 +27,6 @@ public static class Part2
 
   }
 
-  public static string PrintFormattedOutput(List<long> l)
-  {
-    StringBuilder sb = new();
-    for (int i = 0; i < l.Count; i++)
-    {
-      sb.Append($"{l[i]}");
-      if (i != l.Count - 1)
-      {
-        sb.Append(",");
-      }
-    }
-    return sb.ToString();
-  }
-
   public static long GetCombo(long operand)
   {
     return operand switch
@@ -98,12 +84,16 @@ public static class Part2
     RegisterC = RegisterA / (long)Math.Pow(2, GetCombo(operand));
     return;
   }
-
-  public static void RunOneInstruction()
+public static void RunProgram()
   {
+    if (InstructionPointer >= Program.Count)
+    {
+      return;
+    }
+
     long op = Program[InstructionPointer];
     long operand = Program[InstructionPointer + 1];
-
+    //Console.WriteLine($"Op: {op}, Operand: {operand}");
     switch (op)
     {
       case 0:
@@ -133,33 +123,23 @@ public static class Part2
       default:
         throw new Exception($"Unknown operation: {op}");
     }
+    //Console.WriteLine($"A: {RegisterA}, B: {RegisterB}, C: {RegisterC}");
     InstructionPointer += 2;
+    RunProgram();
   }
 
-  public static bool LoopAndCheckProgram()
+  public static void PrintFormattedOutput(List<long> toPrint)
   {
-    while (true)
+    StringBuilder sb = new();
+    for (int i = 0; i < toPrint.Count; i++)
     {
-      for (int i = 0; i < Output.Count; i++)
+      sb.Append($"{toPrint[i]}");
+      if (i != toPrint.Count - 1)
       {
-        if (Program[i] != Output[i])
-        {
-          // no success with this Register, try next
-          return false;
-        }
+        sb.Append(",");
       }
-      // so far all the same
-      if (Output.Count == Program.Count)
-      {
-        // same length!
-        return true;
-      }
-      if (InstructionPointer >= Program.Count)
-      {
-        return false;
-      }
-      RunOneInstruction();
     }
+    Console.WriteLine(sb.ToString());
   }
 
   public static List<long> RunOptimizedProgram(long A)
@@ -167,7 +147,7 @@ public static class Part2
     List<long> resultingOutput = new();
     while (A > 0)
     {
-      resultingOutput.Add(((A % 8) ^ 1 ^ 4) ^ ((A % 8) / (long)Math.Pow(2, (A % 8) ^ 1)));
+      resultingOutput.Add(((A % 8) ^ 1 ^ 4) ^ ((A) / (long)Math.Pow(2, (A % 8) ^ 1)) % 8);
       A = A / 8;
     }
     return resultingOutput;
@@ -175,123 +155,49 @@ public static class Part2
   public static long ReverseProgram(List<long> target)
   {
     long A = 0;
-    target.Reverse();
-    List<long> resultingOutput = new();
-    List<long> notFoundForIndex = new();
-    List<long> badBunch = new();
-    long i = 0;
-    foreach (long x in target)
+    var reverseTarget = target.ToList();
+    reverseTarget.Reverse();
+    int i = 0;
+    foreach (long x in reverseTarget)
     {
-      bool found = false;
-      for (long s = 0; s < 8; s++)
+      A *= 8;
+      i++;
+      Console.Write("Should be: ");
+      PrintFormattedOutput(target[(16-i) .. 16]);
+
+      for (long s = 0; s < 8*8; s++)
       {
-        // (((A % 8) ^ 1 ^ 4) ^ ((A % 8) / (long)Math.Pow(2, (A % 8) ^ 1)))
-        if (x == ((((s) ^ 1) ^ 4) ^ ((s) / (long)Math.Pow(2, ((s) ^ 1)))) % 8)
+        if(target[(16-i) .. 16].SequenceEqual(RunOptimizedProgram(A + s)))
         {
-          resultingOutput.Add(s);
-          found = true;
+          A += s;
+          Console.Write("Is:        ");
+          PrintFormattedOutput(RunOptimizedProgram(A));
           break;
         }
       }
-      if (!found)
-      {
-        resultingOutput.Add(0);
-        badBunch.Add(i);
-        Console.WriteLine(i);
-      }
 
-      i++;
     }
+    return A;
+  }
 
-    for (long bb0 = 0; bb0 < 8; bb0++)
-    {
-      for (long bb1 = 0; bb1 < 8; bb1++)
-      {
-        for (long bb2 = 0; bb2 < 8; bb2++)
-        {
-          for (long bb3 = 0; bb3 < 8; bb3++)
-          {
-            for (long bb4 = 0; bb4 < 8; bb4++)
-            {
-              for (long bb5 = 0; bb5 < 8; bb5++)
-              {
-                for (long bb6 = 0; bb6 < 8; bb6++)
-                {
-                  for (long bb7 = 0; bb7 < 8; bb7++)
-                  {
-                    for (long bb8 = 0; bb8 < 8; bb8++)
-                    {
-                      for (long bb9 = 0; bb9 < 8; bb9++)
-                      {
-                        for (long bb10 = 0; bb10 < 8; bb10++)
-                        {
-                          for (long bb11 = 0; bb11 < 8; bb11++)
-                          {
-                            for (long bb12 = 0; bb12 < 8; bb12++)
-                            {
-                              for (long bb13 = 0; bb13 < 8; bb13++)
-                              {
-                                for (long bb14 = 0; bb14 < 8; bb14++)
-                                {
-                                  for (long bb15 = 0; bb15 < 8; bb15++)
-                                  {
-                                    A = 0;
-                                    resultingOutput[0] = bb0;
-                                    resultingOutput[1] = bb1;
-                                    resultingOutput[3] = bb3;
-                                    resultingOutput[4] = bb4;
-                                    resultingOutput[5] = bb5;
-                                    resultingOutput[6] = bb6;
-                                    resultingOutput[7] = bb7;
-                                    resultingOutput[8] = bb8;
-                                    resultingOutput[9] = bb9;
-                                    resultingOutput[10] = bb10;
-                                    resultingOutput[11] = bb11;
-                                    resultingOutput[12] = bb12;
-                                    resultingOutput[13] = bb13;
-                                    resultingOutput[14] = bb14;
-                                    resultingOutput[15] = bb15;
-
-
-                                    foreach (long x in resultingOutput)
-                                    {
-                                      A *= 8;
-                                      if (x >= 0)
-                                      {
-                                        A += x;
-                                      }
-                                    }
-                                    long reverseA = 0;
-                                    if (Program.SequenceEqual(RunOptimizedProgram(A)))
-                                    {
-                                      return A;
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return -1;
+  public static List<long> GenerateOutput(long A) {
+    RegisterA = A;
+    Output.Clear();
+    RunProgram();
+    return Output;
   }
 
   public static string Solve(List<String> input)
   {
     Parse(input);
 
-    long Iteration = ReverseProgram(Program);
+    long A = ReverseProgram(Program);
+    Console.WriteLine("Target:");
+    PrintFormattedOutput(Program);
+    Console.WriteLine("Current:");
+    PrintFormattedOutput(GenerateOutput(A));
+    PrintFormattedOutput(RunOptimizedProgram(A));
 
-    return Iteration.ToString();
+    return A.ToString();
   }
 }
